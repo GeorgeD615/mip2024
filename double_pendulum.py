@@ -81,31 +81,20 @@ p.setJointMotorControl2(bodyIndex=boxId, jointIndex=jIdx_2, targetVelocity=0, co
 
 for t in logTime[1:]:
 
-    '''
-    p.setJointMotorControl2(
-        bodyIndex=boxId, 
-        jointIndex=jIdx_1, 
-        controlMode=p.TORQUE_CONTROL, 
-        force=-omega1[idx]*m*L
-    )
-    p.setJointMotorControl2(
-        bodyIndex=boxId, 
-        jointIndex=jIdx_2, 
-        controlMode=p.TORQUE_CONTROL, 
-        force=-omega2[idx]*m*L
-    )
-    '''
     p.stepSimulation()
+
     p.setJointMotorControl2(
         bodyIndex=boxId, 
         jointIndex=jIdx_1, 
         controlMode=p.TORQUE_CONTROL, 
-        force=-omega1[0])
+        force=-omega1[idx]
+    )
     p.setJointMotorControl2(
         bodyIndex=boxId, 
         jointIndex=jIdx_2, 
         controlMode=p.TORQUE_CONTROL, 
-        force=-omega2[0])
+        force=-omega2[idx]
+    )
         
     time.sleep(dt)
 
