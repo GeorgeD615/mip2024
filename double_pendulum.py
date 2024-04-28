@@ -8,8 +8,6 @@ L = 0.5
 m = 1
 k = 0.5
 f = 0.1
-tau1 = 0.1
-tau2 = 0.1
 dt = 1/240 # pybullet simulation step
 #q0 = np.pi - np.deg2rad(5)   # starting position (radian)
 q0_1 = np.deg2rad(-15)   # starting position 1(radian)
@@ -42,31 +40,27 @@ for _ in range(1000):
 #     p.stepSimulation()
 #     time.sleep(dt)
 
-# Определяем функцию, возвращающую правые части дифференциальных уравнений
-def derivatives(state, t, L, m, g, tau1, tau2):
-    """
-    Функция, возвращающая производные переменных состояния системы:
-    state: вектор состояния системы (theta1, omega1, theta2, omega2)
-    """
+def derivatives(state, L, m, g):
     # Извлекаем переменные состояния
     theta1, omega1, theta2, omega2 = state
     
-    # Вычисляем производные угловых скоростей
     dth = theta1 - theta2
 
-    domega2 = (tau2/L - tau1/(2*L)*np.cos(dth) - omega2*omega2/2*np.sin(dth)*np.cos(dth) + omega1*np.sin(dth) 
+    '''
+    0 = (tau2/L - tau1/(2*L)*np.cos(dth) - omega2*omega2/2*np.sin(dth)*np.cos(dth) + omega1*np.sin(dth)  
             - g/L*np.sin(theta2)) / (1 + 0.5*np.cos(dth)*np.cos(dth))
             
-    domega1 = tau1/(2*L) - domega2/2*np.cos(dth) - omega2*omega2/2*np.sin(dth) + g/L*np.sin(theta1)
-    
-    
-    # Возвращаем производные переменных состояния
-    return [omega1, domega1, omega2, domega2]
+    0 = tau1/(2*L) - omega2*omega2/2*np.sin(dth) + g/L*np.sin(theta1)
+    '''
+    tau_1 = omega2*L*np.sin(dth)-2*g*np.sin(theta1)
+    tau_2 = tau_1/2*np.cos(dth)+omega2*omega2*L/2*np.sin(dth)*np.cos(dth)-omega1*L*np.sin(dth) + g*np.sin(theta2)
+
+    return [tau_1, tau_2]
 
 
 # turn off the motor for the free motion
-p.setJointMotorControl2(bodyIndex=boxId, jointIndex=jIdx_1, targetVelocity=0, controlMode=p.VELOCITY_CONTROL, force=tau1)
-p.setJointMotorControl2(bodyIndex=boxId, jointIndex=jIdx_2, targetVelocity=0, controlMode=p.VELOCITY_CONTROL, force=tau2)
+p.setJointMotorControl2(bodyIndex=boxId, jointIndex=jIdx_1, targetVelocity=0, controlMode=p.VELOCITY_CONTROL, force=0)
+p.setJointMotorControl2(bodyIndex=boxId, jointIndex=jIdx_2, targetVelocity=0, controlMode=p.VELOCITY_CONTROL, force=0)
 
 for t in logTime[1:]:
     p.stepSimulation()
@@ -82,21 +76,20 @@ for t in logTime[1:]:
     logPos_1[idx] = th1
     logPos_2[idx] = th2
 
-    step = derivatives((th1, om1, th2, om2), dt, L, m, g, tau1, tau2)
+    step = derivatives((th1, om1, th2, om2), L, m, g)
 
     p.setJointMotorControl2(
         bodyIndex=boxId, 
         jointIndex=jIdx_1, 
         controlMode=p.TORQUE_CONTROL, 
-        force=-step[1]
+        force=step[0]
     )
     p.setJointMotorControl2(
         bodyIndex=boxId, 
         jointIndex=jIdx_2, 
         controlMode=p.TORQUE_CONTROL, 
-        force=-step[3]
+        force=step[1]
     )
-
     
     
 
