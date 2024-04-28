@@ -52,11 +52,12 @@ def derivatives(state, t, L, m, g, tau1, tau2):
     theta1, omega1, theta2, omega2 = state
     
     # Вычисляем производные угловых скоростей
-    domega2 = (0.5*omega2*omega2*np.sin(theta1 - theta2)*np.cos(theta1 - theta2)-g/L*np.sin(theta1)*np.cos(theta1 - theta2)
-            - (tau1/(2*L))*np.cos(theta1-theta2)-omega1*omega1*np.sin(theta1-theta2) + g/L*np.sin(theta2) - tau2/L) / (1 - 
-            0.5*np.cos(theta1 - theta2)*np.cos(theta1 - theta2))
+    dth = theta2 - theta1
+
+    domega2 = (tau2/L - tau1/2*L*np.cos(dth) - omega2*omega2/2*np.sin(dth)*np.cos(dth) + omega1*np.sin(dth) 
+            - g/L*np.sin(theta2)) / (1 + 0.5*np.cos(dth)*np.cos(dth))
             
-    domega1 = 0.5*domega2*np.cos(theta1-theta2) + 0.5*omega2*omega2*np.sin(theta1 - theta2) - g/L*np.sin(theta1) - tau1/(2*L)
+    domega1 = tau1/(2*L) - domega2/2*np.cos(dth) - omega2*omega2/2*np.sin(dth) + g/L*np.sin(theta1)
     
     
     # Возвращаем производные переменных состояния
@@ -64,8 +65,8 @@ def derivatives(state, t, L, m, g, tau1, tau2):
 
 
 # turn off the motor for the free motion
-p.setJointMotorControl2(bodyIndex=boxId, jointIndex=jIdx_1, targetVelocity=0, controlMode=p.VELOCITY_CONTROL, force=0)
-p.setJointMotorControl2(bodyIndex=boxId, jointIndex=jIdx_2, targetVelocity=0, controlMode=p.VELOCITY_CONTROL, force=0)
+p.setJointMotorControl2(bodyIndex=boxId, jointIndex=jIdx_1, targetVelocity=0, controlMode=p.VELOCITY_CONTROL, force=tau1)
+p.setJointMotorControl2(bodyIndex=boxId, jointIndex=jIdx_2, targetVelocity=0, controlMode=p.VELOCITY_CONTROL, force=tau2)
 
 for t in logTime[1:]:
     p.stepSimulation()
