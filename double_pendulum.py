@@ -8,6 +8,8 @@ L = 0.5
 m = 1
 k = 0.5
 f = 0.1
+tau1 = 0.1
+tau2 = 0.1
 dt = 1/240 # pybullet simulation step
 #q0 = np.pi - np.deg2rad(5)   # starting position (radian)
 q0_1 = np.deg2rad(-15)   # starting position 1(radian)
@@ -41,7 +43,7 @@ for _ in range(1000):
 #     time.sleep(dt)
 
 # Определяем функцию, возвращающую правые части дифференциальных уравнений
-def derivatives(state, t, L, m, g):
+def derivatives(state, t, L, m, g, tau1, tau2):
     """
     Функция, возвращающая производные переменных состояния системы:
     state: вектор состояния системы (theta1, omega1, theta2, omega2)
@@ -50,54 +52,24 @@ def derivatives(state, t, L, m, g):
     theta1, omega1, theta2, omega2 = state
     
     # Вычисляем производные угловых скоростей
-    domega1 = (-g*3*m*np.sin(theta1) - m*g*np.sin(theta1 - 2*theta2) - 2*np.sin(theta1-theta2)*m*(omega2*omega2*L + omega1 * omega1 
-                * L*np.cos(theta1 - theta2))) / (L*(3*m - m*np.cos(2*theta1 - 2*theta2)))
+    domega2 = (0.5*omega2*omega2*np.sin(theta1 - theta2)*np.cos(theta1 - theta2)-g/L*np.sin(theta1)*np.cos(theta1 - theta2)
+            - (tau1/(2*L))*np.cos(theta1-theta2)-omega1*omega1*np.sin(theta1-theta2) + g/L*np.sin(theta2) - tau2/L) / (1 - 
+            0.5*np.cos(theta1 - theta2)*np.cos(theta1 - theta2))
+            
+    domega1 = 0.5*domega2*np.cos(theta1-theta2) + 0.5*omega2*omega2*np.sin(theta1 - theta2) - g/L*np.sin(theta1) - tau1/(2*L)
     
-    domega2 = (2 * np.sin(theta1 - theta2)*(omega1*omega1*L*2*m + g * 2*m*np.cos(theta1) + 
-                omega2*omega2*L*m*np.cos(theta1 - theta2)))/(L*(3*m - m*np.cos(2*theta1 - 2*theta2)))
     
     # Возвращаем производные переменных состояния
     return [omega1, domega1, omega2, domega2]
 
-# Определяем начальные условия и параметры системы
-initial_state = [q0_1, 0, q0_2, 0]  # начальные углы и скорости
-
-# Интегрируем систему дифференциальных уравнений
-result = odeint(derivatives, initial_state, logTime, args=(L, m, g))
-
-# Извлекаем значения углов и их скоростей из результата
-
-theta1 = result[:, 0]
-omega1 = result[:, 1]
-theta2 = result[:, 2]
-omega2 = result[:, 3]
-
-
-result = odeint(derivatives, initial_state, logTime, args=(L, m, g))
 
 # turn off the motor for the free motion
 p.setJointMotorControl2(bodyIndex=boxId, jointIndex=jIdx_1, targetVelocity=0, controlMode=p.VELOCITY_CONTROL, force=0)
 p.setJointMotorControl2(bodyIndex=boxId, jointIndex=jIdx_2, targetVelocity=0, controlMode=p.VELOCITY_CONTROL, force=0)
 
 for t in logTime[1:]:
-
     p.stepSimulation()
-
-    p.setJointMotorControl2(
-        bodyIndex=boxId, 
-        jointIndex=jIdx_1, 
-        controlMode=p.TORQUE_CONTROL, 
-        force=-omega1[idx]
-    )
-    p.setJointMotorControl2(
-        bodyIndex=boxId, 
-        jointIndex=jIdx_2, 
-        controlMode=p.TORQUE_CONTROL, 
-        force=-omega2[idx]
-    )
-        
     time.sleep(dt)
-
 
     jointState_1 = p.getJointState(boxId, jIdx_1)
     jointState_2 = p.getJointState(boxId, jIdx_2)
@@ -109,6 +81,21 @@ for t in logTime[1:]:
     logPos_1[idx] = th1
     logPos_2[idx] = th2
 
+    step = derivatives((th1, om1, th2, om2), dt, L, m, g, tau1, tau2)
+
+    p.setJointMotorControl2(
+        bodyIndex=boxId, 
+        jointIndex=jIdx_1, 
+        controlMode=p.TORQUE_CONTROL, 
+        force=-step[1]
+    )
+    p.setJointMotorControl2(
+        bodyIndex=boxId, 
+        jointIndex=jIdx_2, 
+        controlMode=p.TORQUE_CONTROL, 
+        force=-step[3]
+    )
+
     
     
 
@@ -117,10 +104,6 @@ import matplotlib.pyplot as plt
 plt.grid(True)
 plt.plot(logTime, logPos_1, label = "simPos_1")
 plt.plot(logTime, logPos_2, label = "simPos_2")
-plt.plot(logTime, theta1, label = "theta1")
-plt.plot(logTime, theta2, label = "theta2")
-plt.plot(logTime, omega1, label = "om1")
-plt.plot(logTime, omega2, label = "om2")
 
 #plt.plot(logTime, logLin, label = "logLin")
 plt.legend()
