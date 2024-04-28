@@ -52,7 +52,7 @@ def derivatives(state, L, m, g):
             
     0 = tau1/(2*L) - omega2*omega2/2*np.sin(dth) + g/L*np.sin(theta1)
     '''
-    tau_1 = omega2*L*np.sin(dth)-2*g*np.sin(theta1)
+    tau_1 = omega2*omega2*L*np.sin(dth)-2*g*np.sin(theta1)
     tau_2 = tau_1/2*np.cos(dth)+omega2*omega2*L/2*np.sin(dth)*np.cos(dth)-omega1*L*np.sin(dth) + g*np.sin(theta2)
 
     return [tau_1, tau_2]
@@ -77,7 +77,6 @@ for t in logTime[1:]:
     logPos_2[idx] = th2
 
     step = derivatives((th1, om1, th2, om2), L, m, g)
-
     p.setJointMotorControl2(
         bodyIndex=boxId, 
         jointIndex=jIdx_1, 
@@ -90,6 +89,7 @@ for t in logTime[1:]:
         controlMode=p.TORQUE_CONTROL, 
         force=step[1]
     )
+
     
     
 
