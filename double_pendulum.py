@@ -10,8 +10,8 @@ k = 0.5
 f = 0.1
 dt = 1/240 # pybullet simulation step
 #q0 = np.pi - np.deg2rad(5)   # starting position (radian)
-q0_1 = np.deg2rad(-15)   # starting position 1(radian)
-q0_2 = np.deg2rad(-105)
+q0_1 = np.deg2rad(20)   # starting position 1(radian)
+q0_2 = np.deg2rad(60)
 jIdx_1 = 1
 jIdx_2 = 3
 maxTime = 5
@@ -45,15 +45,13 @@ def derivatives(state, L, m, g):
     theta1, omega1, theta2, omega2 = state
     
     dth = theta1 - theta2
+    '''
+    tau_1 = m*L*L*omega2*omega2*np.sin(dth) + 2*m*g*L*np.sin(theta1)
+    tau_2 = -m*L*L*omega1*omega1*np.sin(dth) + m*g*L*np.sin(theta2)
+    '''
 
-    '''
-    0 = (tau2/L - tau1/(2*L)*np.cos(dth) - omega2*omega2/2*np.sin(dth)*np.cos(dth) + omega1*np.sin(dth)  
-            - g/L*np.sin(theta2)) / (1 + 0.5*np.cos(dth)*np.cos(dth))
-            
-    0 = tau1/(2*L) - omega2*omega2/2*np.sin(dth) + g/L*np.sin(theta1)
-    '''
-    tau_1 = omega2*omega2*L*np.sin(dth)-2*g*np.sin(theta1)
-    tau_2 = tau_1/2*np.cos(dth)+omega2*omega2*L/2*np.sin(dth)*np.cos(dth)-omega1*L*np.sin(dth) + g*np.sin(theta2)
+    tau_1 = 2*m*g*L*np.sin(theta1) + m*g*L*np.sin(theta1 + theta2)
+    tau_2 = m*g*L*np.sin(theta1 + theta2)
 
     return [tau_1, tau_2]
 
@@ -95,10 +93,16 @@ for t in logTime[1:]:
 
 import matplotlib.pyplot as plt
 
+Q1 = np.zeros(sz)
+Q2 = np.zeros(sz)
+Q1[:] = q0_1
+Q2[:] = q0_2 
+
 plt.grid(True)
 plt.plot(logTime, logPos_1, label = "simPos_1")
 plt.plot(logTime, logPos_2, label = "simPos_2")
-
+plt.plot(logTime, Q1, label = "Q1")
+plt.plot(logTime, Q2, label = "Q2")
 #plt.plot(logTime, logLin, label = "logLin")
 plt.legend()
 
